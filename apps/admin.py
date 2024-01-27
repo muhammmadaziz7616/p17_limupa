@@ -1,32 +1,37 @@
-import csv
-
 from django.contrib import admin
-from django.forms import forms
-from django.http import HttpResponse
+from django.contrib.auth.admin import UserAdmin
+from django.utils.safestring import mark_safe
 
-from apps.models import Category, Blog, Comment, Tag
-
-
-class CsvImportForm(forms.Form):
-    csv_file = forms.FileField()
+from apps.models import Category, Blog, Comment, Tag, User
+from django.utils.translation import gettext_lazy as _
 
 
-class ExportCsvMixin:
-    def export_as_csv(self, request, queryset):
-        meta = self.model._meta
-        field_names = [field.name for field in meta.fields]
+@admin.register(User)
+class CustomUserAdmin(UserAdmin):
+    list_display = ('custom_image', "username", "email", "first_name", "last_name", "is_staff")
 
-        response = HttpResponse(content_type='text/csv')
-        response['Content-Disposition'] = 'attachment; filename={}.csv'.format(meta)
-        writer = csv.writer(response)
+    fieldsets = (
+        (None, {"fields": ("username", "password")}),
+        (_("Personal info"), {"fields": ("first_name", "last_name", "email", 'image')}),
+        (
+            _("Permissions"),
+            {
+                'fields': (
+                    "is_active",
+                    "is_staff",
+                    "is_superuser",
+                    "groups",
+                    "user_permissions",
+                ),
+            },
+        ),
+        (_("Important dates"), {"fields": ("last_login", "date_joined")}),
+    )
 
-        writer.writerow(field_names)
-        for obj in queryset:
-            row = writer.writerow([getattr(obj, field) for field in field_names])
+    def custom_image(self, obj: User):
+        return mark_safe('<img src="{}"/>'.format(obj.image.url))
 
-        return response
-
-    export_as_csv.short_description = "Export Selected"
+    custom_image.short_description = 'image'
 
 
 @admin.register(Category)
